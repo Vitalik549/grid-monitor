@@ -1,0 +1,289 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+  <meta charset="utf-8">
+
+  <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.16/css/jquery.dataTables.min.css">
+
+  <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+  <script src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js" ></script>
+
+  <style type="text/css">
+
+   	.body{
+ 	  width: 80%;
+ 	  position: absolute;
+ 	  right: 10%;
+	}
+
+  	.slider {
+  		background-color: green;
+		margin-top: 0px;
+		  -webkit-appearance: none;
+		     -moz-appearance: none;
+		          appearance: none;
+		  width: 30%;
+		  height: 0.25rem;
+		  outline: none;
+		  border-radius: 0.25rem;
+	}
+	
+ 	input[type=url] {
+    width: 100%;
+    box-sizing: border-box;
+    border: 2px solid #ccc;
+    border-radius: 4px;
+    font-size: 16px;
+    background-color: white;
+    background-position: 10px 10px; 
+    background-repeat: no-repeat;
+    padding: 12px 20px 12px 10px;
+	}
+
+	.slider::-webkit-slider-thumb {
+		background-color: green;
+ 		 -webkit-appearance: none;
+ 		         appearance: none;
+ 		 width: 1.1rem;
+ 		 height: 1.1rem;
+ 		 
+ 		 border: 0.10rem solid white;
+ 		 border-radius: 1rem;
+ 		 cursor: pointer;
+	}
+
+	.slider.disabled, .slider.disabled::-webkit-slider-thumb {
+		background-color: #C0C0C0;
+	}
+
+	.disabled{
+		color: #C0C0C0;
+	}
+
+	.panel {
+		width:100%;
+		display: inline-block;
+		position: relative;
+	}
+
+	.panel div{
+		display: inline-block;
+		width:50%;
+	}
+
+	#rr{
+	width:30%;
+	margin-left: 19%;
+	}
+
+  </style>
+
+
+</head>
+
+<body>
+	<div class="body">
+	<div class="panel">
+		<div>
+			<input id="urlinput" type="url" placeholder="http://">
+		</div>
+
+
+		<div id="rr">
+		Table refresh rate
+		<input id="a1" class="slider" type="range" name="range" min="0" max="6" step="1" value="0">
+		<span id="a2">OFF</span>
+		</div>
+	</div>
+
+  <table id="mytable" class=" hover" width="100%" cellspacing="0"/>
+  </div>
+
+  <script>
+
+  var REFRESH_ENABLED = false;
+
+  var values = [
+			'OFF', 
+			'0.5 seconds',
+			'1 second',
+			'2 seconds',
+			'3 seconds',
+			'5 seconds',
+			'10 seconds'];
+
+	var millisTable = [
+			'0', 
+			'500',
+			'1000',
+			'2000',
+			'3000',
+			'5000',
+			'10000'];
+
+    function prettyPrint(el){
+    	var spaces = 5;
+
+    	return el 
+    		? '<pre>' + JSON
+    			.stringify(el, null, spaces)
+    			.replace(/\s{5}"/g, '') //extra spaces
+    			.replace(/[",:{}]/g, '') //symbols
+    			.replace(/\n\s+\n/g, '\n') //empty lines
+    			+ '</pre>' 
+    		: null;
+    }
+
+	function removeRow(el){
+		var row = $('#mytable').DataTable().row( $(el).parents('tr') )
+		var url = row.data().url;
+
+		$.post("/gridremove", url,
+   		 function(data, status){
+   		 	console.log(data);
+   		    row.remove().draw(true); //remove out of callback
+   		 });
+	}
+
+	function addRow(text){
+		var grid = {url:text}
+	
+		$.post("/gridadd", text,
+   		 function(data, status){
+   		 	console.log(data);
+   		     $('#mytable').DataTable().row.add(JSON.parse(data)).draw(false);
+   		 });
+	}
+
+	function setTableRefreshRate(){
+		$('#mytable').DataTable().ajax.reload();
+		var refreshRate = millisTable[$('#a1').val()];
+		console.log('refreshRage' + refreshRate)
+		if (!$('#rr').hasClass('disabled')) {
+			window.setTimeout(setTableRefreshRate, refreshRate);
+			REFRESH_ENABLED = true;
+		}
+	}
+
+	$(document).ready(function() {
+	    var table = $('#mytable').DataTable( {
+	    	autoWidth: true, 
+	    	ordering:false,
+	    	searching: false,
+	    	info: false,
+	    	paging: false,
+	        ajax: {
+	        	timeout: 10000,
+	        	type: 'GET',
+    		    url: 'http://localhost:8088/grids',
+    		    dataSrc: function ( d ) {
+
+    		    	d.data = d.data.map(JSON.parse);
+    				dd1 = d;
+
+  				 return d.data;
+  				},
+    	
+    		    liveAjax: true,
+    		    interval: 1,
+    		},
+	        columns: [
+	            {	
+	            	"data": "url" ,
+	            	"title": "url",
+	            	"defaultContent": "",
+	            	"width": "40%"
+	            },
+	            {
+	            	"data": "total",
+	            	"title": "total",
+	            	"defaultContent": "", 
+	            	"width": "5%"
+	            },
+	            { 
+	            	"data": "used" , 
+	            	"title": "used",
+	            	"defaultContent": "", 
+	            	"width": "5%"
+	            },
+	            {
+	            	"data": "queued" , 
+	            	"title":"queued",
+	            	"defaultContent": "", 
+	            	"width": "5%"
+	            },
+	            {
+	            	"data": "pending" , 
+	            	"title":"pending",
+	            	"defaultContent": "", 
+	            	"width": "5%",
+	            },
+	            {
+	            	data: function(row){
+	            		return prettyPrint(row.browsers);
+	            	 },
+	            	"title":"browsers",
+	            	"defaultContent": ""
+	            },
+	            {	
+	            	"data": null ,
+	            	"defaultContent": "<button onclick='removeRow(this)'>Remove</button>", 
+	            	"title": "",
+	            	"width": "3%"
+	            }
+	        ]
+	    } );
+
+	    $("#urlinput").keyup(function(event){
+		    if(event.keyCode == 13){
+		    	var url = $(this).val();
+		    	if (url) {
+		    		addRow(url);
+		    		$(this).val('');
+		    	}
+		    }
+		});
+
+		$('#a2')
+			.text(values[0])
+			.attr('max', values.length);
+
+		$('#a1').on('input change', function() {
+			var val = values[this.value];
+
+			if (val==values[0]) {
+				$('#a1, #rr').addClass('disabled');
+				REFRESH_ENABLED = false;
+			}else{
+				$('#a1, #rr').removeClass('disabled')
+				if (!REFRESH_ENABLED) {setTableRefreshRate()}
+			}
+
+		    $('#a2').text(val);
+		    
+		});
+
+		$("button").click(function(){
+        $.post("demo_test_post.asp",
+        {
+          name: "Donald Duck",
+          city: "Duckburg"
+        },
+        function(data,status){
+            alert("Data: " + data + "\nStatus: " + status);
+        });
+    });
+
+		$('#a1, #rr').addClass('disabled');
+
+		setTableRefreshRate();
+	   
+	} );
+
+
+  </script>
+
+</body>
+
+</html>
