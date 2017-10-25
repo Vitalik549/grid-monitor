@@ -69,7 +69,7 @@
             width: 50%;
         }
 
-        #rr {
+        #rr-panel {
             width: 30%;
             margin-left: 19%;
         }
@@ -83,22 +83,23 @@
         <div>
             <input id="urlinput" type="url" placeholder="http://">
         </div>
-        <div id="rr">
+        <div id="rr-panel">
             Table refresh rate
-            <input id="a1" class="slider" type="range" name="range" min="0" max="6" step="1" value="0">
-            <span id="a2">OFF</span>
+            <input id="rr-scroll" class="slider" type="range" name="range" min="0" step="1" value="0">
+            <span id="rr-val">OFF</span>
         </div>
     </div>
 
-    <table id="mytable" class=" hover" width="100%" cellspacing="0"/>
+    <table id="mytable" class=" hover" width="100%" cellspacing="0"></table>
 </div>
 
 <script>
 
     var REFRESH_ENABLED = false;
+    var OFF = 'OFF'
 
     var values = [
-        'OFF',
+        OFF,
         '0.5 seconds',
         '1 second',
         '2 seconds',
@@ -169,9 +170,9 @@
 
     function setTableRefreshRate() {
         $('#mytable').DataTable().ajax.reload();
-        var refreshRate = millisTable[$('#a1').val()];
+        var refreshRate = millisTable[$('#rr-scroll').val()];
         console.log('refreshRage' + refreshRate)
-        if (!$('#rr').hasClass('disabled')) {
+        if (!$('#rr-panel').hasClass('disabled')) {
             window.setTimeout(setTableRefreshRate, refreshRate);
             REFRESH_ENABLED = true;
         }
@@ -247,41 +248,29 @@
             }
         });
 
-        $('#a2')
-            .text(values[0])
-            .attr('max', values.length);
+        $('#rr-val')
+            .text(OFF);
 
-        $('#a1').on('input change', function () {
-            var val = values[this.value];
+        $('#rr-scroll')
+            .attr('max', values.length - 1)
+            .on('input change', function () {
+                var val = values[this.value];
 
-            if (val === values[0]) {
-                $('#a1, #rr').addClass('disabled');
-                REFRESH_ENABLED = false;
-            } else {
-                $('#a1, #rr').removeClass('disabled');
-                if (!REFRESH_ENABLED) {
-                    setTableRefreshRate()
+                if (val === OFF) {
+                    $('#rr-scroll, #rr-panel').addClass('disabled');
+                    REFRESH_ENABLED = false;
+                } else {
+                    $('#rr-scroll, #rr-panel').removeClass('disabled');
+                    if (!REFRESH_ENABLED) {
+                        setTableRefreshRate()
+                    }
                 }
-            }
 
-            $('#a2').text(val);
+                $('#rr-val').text(val);
 
-        });
+            });
 
-        $("button").click(function () {
-            $.post("demo_test_post.asp",
-                {
-                    name: "Donald Duck",
-                    city: "Duckburg"
-                },
-                function (data, status) {
-                    alert("Data: " + data + "\nStatus: " + status);
-                });
-        });
-
-        $('#a1, #rr').addClass('disabled');
-
-        setTableRefreshRate();
+        $('#rr-scroll, #rr-panel').addClass('disabled');
 
     });
 
