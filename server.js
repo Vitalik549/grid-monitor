@@ -1,143 +1,114 @@
 var http = require('http');
 var url = require('url');
 var querystring = require('querystring');
-var static = require('node-static');
-var file = new static.Server('.');
-var qs = require('querystring');
+var nodeStatic = require('node-static');
+var file = new nodeStatic.Server('.');
 var XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
 const util = require('util');
 
-var urls = [
-'http://localhost:8088/json',
-'http://10.2.4.155:4444/status',
-'http://10.2.4.179:4444/status',
-//'http://localhost:8088/json',
-//'http://localhost:8088/json',
-//'http://localhost:8088/json',
-//'http://localhost:8088/json',
-//'http://localhost:8088/json',
-//'http://localhost:8088/json',
-//'http://localhost:8088/json',
-//'http://localhost:8088/json',
-//'http://localhost:8088/json',
-'http://localhost:8088/json'
-];
+var fs = require('fs');
+var xpath = require('xpath');
+var dom = require('xmldom').DOMParser;
 
+var REQUEST_TIMEOUT = 3000;
+const GRID_XML = 'grids.xml';
 
-var REQUEST_TIMEOUT = 2000;  
-var i = 0;
-
-handleNetErr = function(e) { 
-  console.log('HANDLE ERROR' + e);
-  return e; 
-};
+var urls = fetchNodesFromXml(GRID_XML);
 
 function accept(req, res) {
+    var body = '';
 
-  //console.log(req.url)
-  var body = '';
-
-  if (req.url.startsWith('/grid')) {
-    req
-        .on('data', function (data) {
-          console.log('data');
-           body += data;
+    if (req.url.startsWith('/grid')) {
+        req.on('data', function (data) {
+            console.log('data');
+            body += data;
             if (body.length > 1e6)
                 request.connection.destroy();
 
-            console.log(body); 
+            console.log(body);
         });
-  };
+    }
 
-  if (req.url.startsWith('/grids')) {
-    req.on('end', function () {
+    if (req.url.startsWith('/grids')) {
+        req.on('end', function () {
             console.log('PARSED URLS: ' + urls);
-
-             Promise.all(urls.map(httpGet)).then(texts => {
-                    //console.log('\n!!!!TOTAL!!n' + texts + '\n');
-                    res.end(JSON.stringify({'data': texts}));
-             });
-    });
-
-    //console.log('code after promiseAll');
-  } else if(req.url =='/json'){
-    //console.log('REQUESTED JSON!!!!!!!!!' + i++)
-    res.end('{"total":71,"used":0,"queued":0,"pending":0,"browsers":{"chrome":{"60.0":{},"61.0":{}},"firefox":{"54.0":{},"55.0":{}}}}');
-
-  }else if(req.url.startsWith('/gridadd')){
-    req.on('end', function () {
-            console.log('BODY: ' + body)
-            urls.push(body)
-            httpGet(body)
-              .then(function(response, error) {
+            Promise.all(urls.map(httpGet)).then(texts =>
+                res.end(JSON.stringify({'data': texts}))
+            );
+        });
+    } else if (req.url === '/json') {
+        res.end('{"total":71,"used":0,"queued":0,"pending":0,"browsers":{"chrome":{"60.0":{},"61.0":{}},"firefox":{"54.0":{},"55.0":{}}}}');
+    } else if (req.url.startsWith('/gridadd')) {
+        req.on('end', function () {
+            urls.push(body);
+            httpGet(body).then(function (response, error) {
                 res.end(response);
-              });
-    });
-  }else if(req.url.startsWith('/gridremove')){
-    req.on('end', function () {
-            console.log('BODY: ' + body)
-
+            });
+        });
+    } else if (req.url.startsWith('/gridremove')) {
+        req.on('end', function () {
             var index = urls.indexOf(body);
-            console.log('index: ' + index)
             if (index !== -1) {
                 urls.splice(index, 1);
             }
-            res.end(JSON.stringify(index)); ;
-    });
-  }   else {
-    file.serve(req, res); 
-  }
-
+            res.end(JSON.stringify(index));
+        });
+    } else {
+        file.serve(req, res);
+    }
 }
-
-function timeout(promise, timeout, callback) {
-  return new Promise(function (resolve, reject) {
-    promise.then(resolve);
-
-    setTimeout(function () {
-      resolve(callback);
-    }, timeout);
-  });
-}
-
 
 function httpGet(path) {
     console.log('Getting data for path: ' + path);
 
-    return timeout(new Promise(function (resolve, reject) {
-            const request = new XMLHttpRequest();
-            request.onload = function () {
-                var obj = {};
-                if (this.status === 200) {
-                    obj = JSON.parse(this.responseText);
-                }
-                obj.url = path;
-                var text = JSON.stringify(obj);
-                //console.log('\nrequestResult: ' + text)
-                resolve(text);
+    return new Promise(function (resolve, reject) {
+        const request = new XMLHttpRequest();
 
-            };
-            request.onerror = function () {
-                    console.log('\nREQUEST ERROR!!!');
-                    resolve(getEmptyObjString(path));
-            };
-            request.open('GET', path);
-            request.send();
-            //console.log('send request to path: ' + path);
-        }), REQUEST_TIMEOUT, getEmptyObjString(path));
+        setTimeout(function () {
+            if (request.readyState !== 4) {
+                request.abort();
+                console.log(util.format('Request aborted by timeout %s: %s', REQUEST_TIMEOUT, path));
+            }
+        }, REQUEST_TIMEOUT);
+
+        request.onload = function () {
+            var obj = {};
+            if (this.status === 200) {
+                obj = JSON.parse(this.responseText);
+            }
+            obj.url = path;
+            resolve(JSON.stringify(obj));
+
+        };
+        request.onerror = function () {
+            var obj = {};
+            obj.url = path;
+            resolve(JSON.stringify(obj));
+        };
+        request.open('GET', path);
+        request.send();
+    });
 }
 
-function getEmptyObjString(path){
-  var obj = {};
-  obj.url = path;
-  return(JSON.stringify(obj));
-}
+function fetchNodesFromXml(pathToFile) {
+    let nodes = [];
+    let data = fs.readFileSync(pathToFile, {encoding: 'UTF-8'});
+    let doc = new dom().parseFromString(data);
+    let childNodes = xpath.select('//host', doc);
 
+    childNodes.forEach(function (node) {
+        let ip = xpath.select1("@name", node).value;
+        let port = xpath.select1("@port", node).value;
+        nodes.push('http://' + ip + ':' + port + "/status")
+    });
+
+    return nodes;
+}
 
 if (!module.parent) {
-  http.createServer(accept).listen(8088);
+    http.createServer(accept).listen(8088);
 } else {
-  exports.accept = accept;
+    exports.accept = accept;
 }
 
 console.log('Server started');
