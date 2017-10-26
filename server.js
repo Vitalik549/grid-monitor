@@ -85,7 +85,7 @@ function httpGet(path) {
             obj.url = path;
             resolve(JSON.stringify(obj));
         };
-        request.open('GET', path);
+        request.open('GET', path + "/status");
         request.send();
     });
 }
@@ -99,7 +99,7 @@ function fetchNodesFromXml(pathToFile) {
     childNodes.forEach(function (node) {
         let ip = xpath.select1("@name", node).value;
         let port = xpath.select1("@port", node).value;
-        nodes.push('http://' + ip + ':' + port + "/status")
+        nodes.push('http://' + ip + ':' + port)
     });
 
     return nodes;
