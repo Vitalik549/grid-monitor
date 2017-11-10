@@ -1,0 +1,115 @@
+
+.body {
+    width: 80%;
+    position: absolute;
+    right: 10%;
+}
+
+.slider {
+    background-color: green;
+    margin-top: 0px;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    width: 30%;
+    height: 0.25rem;
+    outline: none;
+    border-radius: 0.25rem;
+}
+
+input[type=url] {
+    width: 100%;
+    box-sizing: border-box;
+    border: 2px solid #ccc;
+    border-radius: 4px;
+    font-size: 16px;
+    background-color: white;
+    background-position: 10px 10px;
+    background-repeat: no-repeat;
+    padding: 6px 20px 6px 10px;
+    margin-bottom: 10px;
+}
+
+.slider::-webkit-slider-thumb {
+    background-color: green;
+    -webkit-appearance: none;
+    appearance: none;
+    width: 1.1rem;
+    height: 1.1rem;
+
+    border: 0.10rem solid white;
+    border-radius: 1rem;
+    cursor: pointer;
+}
+
+.slider.disabled, .slider.disabled::-webkit-slider-thumb {
+    background-color: #C0C0C0;
+}
+
+.disabled {
+    color: #C0C0C0;
+}
+
+.panel {
+    width: 100%;
+    display: inline-block;
+    position: relative;
+}
+
+.panel div {
+    display: inline-block;
+}
+
+#rr-panel {
+    width: 30%;
+    margin-left: 10px;
+}
+
+.button.remove:hover {
+    background-color: red;
+}
+
+.button:hover {
+    cursor: pointer;
+}
+
+.button {
+    border: none;
+    height: 20px;
+    padding: 0px 15px;
+    font-size: 16px;
+    font-weight: 300;
+    margin-top: 0px;
+    margin-right: 5px;
+}
+
+.button.remove {
+    background-color: #FF9696;
+    color: #ffffff;
+}
+
+.button.json {
+    background-color: #C2EA7F;
+    color: #ffffff;
+}
+
+.button.json:hover {
+    background-color: #98D72E;
+}
+
+a {
+    color: black;
+    text-decoration: none;
+}
+
+td:nth-child(1) {
+    text-align: left;
+}
+
+td:nth-child(n+2) {
+    text-align: center;
+}
+
+table.dataTable tbody th, table.dataTable tbody td {
+    padding: 5px 10px 5px 0px;
+}

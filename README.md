@@ -8,8 +8,7 @@ Install npm and node [with Homebrew](https://changelog.com/posts/install-node-js
 
 Install required modules:
 ```
-npm install node-static
-npm install xmlhttprequest
+npm install
 ```
 
 ## Execution

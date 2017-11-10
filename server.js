@@ -6,14 +6,12 @@ var file = new nodeStatic.Server('.');
 var XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
 const util = require('util');
 
-var fs = require('fs');
-var xpath = require('xpath');
-var dom = require('xmldom').DOMParser;
+var reader = require('./xml-reader');
 
 var REQUEST_TIMEOUT = 3000;
 const GRID_XML = 'grids.xml';
 
-var urls = fetchNodesFromXml(GRID_XML);
+var urls = reader.fetchUrlsFromXml(GRID_XML);
 
 function accept(req, res) {
     var body = '';
@@ -23,7 +21,7 @@ function accept(req, res) {
             console.log('data');
             body += data;
             if (body.length > 1e6)
-                request.connection.destroy();
+                req.connection.destroy();
 
             console.log(body);
         });
@@ -36,8 +34,8 @@ function accept(req, res) {
                 res.end(JSON.stringify({'data': texts}))
             );
         });
-    } else if (req.url === '/json') {
-        res.end('{"total":71,"used":0,"queued":0,"pending":0,"browsers":{"chrome":{"60.0":{},"61.0":{}},"firefox":{"54.0":{},"55.0":{}}}}');
+    } else if (req.url.startsWith('/status')) {
+        res.end('{"total":'+Math.round(Math.random()*100)+',"used":'+Math.round(Math.random()*10)+',"queued":3,"pending":4,"browsers":{"chrome":{"60.0":{},"61.0":{}},"firefox":{"54.0":{},"55.0":{}}}}');
     } else if (req.url.startsWith('/gridadd')) {
         req.on('end', function () {
             urls.push(body);
@@ -88,21 +86,6 @@ function httpGet(path) {
         request.open('GET', path + "/status");
         request.send();
     });
-}
-
-function fetchNodesFromXml(pathToFile) {
-    let nodes = [];
-    let data = fs.readFileSync(pathToFile, {encoding: 'UTF-8'});
-    let doc = new dom().parseFromString(data);
-    let childNodes = xpath.select('//host', doc);
-
-    childNodes.forEach(function (node) {
-        let ip = xpath.select1("@name", node).value;
-        let port = xpath.select1("@port", node).value;
-        nodes.push('http://' + ip + ':' + port)
-    });
-
-    return nodes;
 }
 
 if (!module.parent) {
