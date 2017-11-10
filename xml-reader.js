@@ -4,7 +4,15 @@ const dom = require('xmldom').DOMParser;
 
  function fetchUrlsFromXml(pathToFile) {
     let nodes = [];
-    let data = fs.readFileSync(pathToFile, {encoding: 'UTF-8'});
+
+    let data;
+
+    try{
+        data = fs.readFileSync(pathToFile, {encoding: 'UTF-8'});
+    }catch (err){
+        return [];
+    }
+
     let doc = new dom().parseFromString(data);
     let childNodes = xpath.select('//host', doc);
 
